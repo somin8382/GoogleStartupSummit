@@ -16,7 +16,7 @@
             --accent-gold: #c9a227;
             --text-cream: #f5f0e8;
             --text-dim: #9ca3af;
-            --border-subtle: rgba(255, 255, 255, 0.1);
+            --border-subtle: rgba(255, 255, 255, 0.08);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -26,11 +26,13 @@
             background: var(--bg-dark);
             color: var(--text-cream);
             min-height: 100vh;
-            overflow-x: hidden;
+            overflow-x: hidden;   /* 가로 스크롤 차단, 세로는 허용 */
+            overflow-y: auto;
             display: flex;
             flex-direction: column;
         }
 
+        /* Ambient Background Glow */
         .ambient {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none;
@@ -41,6 +43,34 @@
             z-index: 0;
         }
 
+        /* --- Intro Screen --- */
+        #intro-screen {
+            position: fixed; inset: 0; z-index: 9999;
+            background: var(--bg-dark);
+            display: flex; align-items: center; justify-content: center;
+            text-align: center; padding: 2rem;
+            transition: opacity 0.8s ease, visibility 0.8s;
+        }
+        #intro-screen.hide { opacity: 0; visibility: hidden; }
+
+        .intro-card {
+            max-width: 600px; width: 100%;
+            background: var(--bg-panel);
+            padding: 4rem 2rem; border-radius: 40px;
+            border: 1px solid var(--border-subtle);
+            box-shadow: 0 30px 100px rgba(0,0,0,0.8);
+            position: relative; overflow: hidden;
+        }
+        .intro-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 8px;
+            background: linear-gradient(to right, var(--google-blue), var(--google-red), var(--google-yellow), var(--google-green));
+        }
+        .intro-welcome { color: var(--google-blue); font-weight: 900; font-size: 1.2rem; margin-bottom: 1rem; letter-spacing: 0.1em; }
+        .intro-title { font-size: 2.2rem; font-weight: 900; color: #fff; margin-bottom: 0.5rem; line-height: 1.2; }
+        .intro-subtitle { font-size: 1.1rem; color: var(--text-dim); margin-bottom: 2.5rem; }
+        .intro-desc { font-size: 1.3rem; color: var(--google-yellow); font-weight: 700; margin-bottom: 3rem; }
+
+        /* --- Main Game Layout --- */
         header {
             position: relative; z-index: 10; padding: 1.2rem; text-align: center;
             border-bottom: 4px solid;
@@ -52,7 +82,7 @@
             font-size: 1.3rem; font-weight: 900; letter-spacing: 0.05em;
             color: #fff; line-height: 1.4;
         }
-        .game-title span { color: var(--google-blue); font-size: 0.9rem; display: block; opacity: 0.9; margin-top: 3px; }
+        .game-title span { color: var(--google-blue); font-size: 0.9rem; display: block; font-weight: 700; }
 
         .status-bar {
             display: flex; justify-content: center; gap: 2rem; padding: 0.7rem;
@@ -61,291 +91,202 @@
         }
         .status-item { text-align: center; }
         .status-label { font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 2px; }
-        .status-value { font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: var(--google-blue); }
+        .status-value { font-family: 'JetBrains Mono', monospace; font-size: 1rem; font-weight: 700; }
+        .val-blue { color: var(--google-blue); }
+        .val-red { color: var(--google-red); }
+        .val-green { color: var(--google-green); }
 
         .game-container {
             position: relative; z-index: 10;
-            max-width: 1100px; width: 100%;
+            max-width: 1200px; width: 100%;  /* 최대 너비도 1100→1200px 확장 */
             margin: 0 auto; padding: 1rem;
-            flex-grow: 1; display: flex; flex-direction: column;
+            flex-shrink: 0;   /* flex-grow 대신 shrink 방지 — 콘텐츠 높이 그대로 확장 */
+            display: flex; flex-direction: column;
         }
 
         /* --- Room View --- */
         .room-view {
             position: relative; width: 100%; aspect-ratio: 16/9;
-            max-height: 55vh; background: #12151c;
+            /* max-height 크게 늘림 — 화면이 좁으면 스크롤로 처리 */
+            max-height: 72vh; background: #12151c;
             border: 4px solid #2d333d; border-radius: 20px;
             overflow: hidden; box-shadow: 0 30px 60px rgba(0,0,0,0.8);
             margin-bottom: 0.8rem;
         }
 
-        .room-wall {
-            position: absolute; inset: 0;
-            background: linear-gradient(180deg, #1a1e26 0%, #0f1218 100%);
+        .room-wall { position: absolute; inset: 0; background: linear-gradient(180deg, #1a1e26 0%, #0f1218 100%); }
+        .window { position: absolute; top: 8%; right: 12%; width: 18%; height: 22%; background: linear-gradient(to bottom, #87CEEB, #E0F7FA); border: 6px solid #2d333d; border-radius: 4px; overflow: hidden; }
+        .mountain { position: absolute; bottom: 0; width: 100%; height: 50%; background: #34A853; clip-path: polygon(0% 100%, 25% 30%, 50% 70%, 75% 20%, 100% 100%); opacity: 0.5; }
+        .room-floor { position: absolute; bottom: 0; width: 100%; height: 22%; background: #1c222b; border-top: 2px solid #2d333d; background-image: repeating-linear-gradient(90deg, #242a35 0px, #242a35 1px, transparent 1px, transparent 60px); }
+
+        /* --- Object Styling --- */
+        .object { position: absolute; cursor: pointer; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 40; }
+        .object:hover { filter: brightness(1.2) drop-shadow(0 0 15px rgba(255,255,255,0.3)); transform: scale(1.05); }
+        .object.solved::after { content: '✓'; position: absolute; top: -10px; right: -10px; background: var(--google-green); color: #fff; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid #fff; box-shadow: 0 5px 10px rgba(0,0,0,0.5); z-index: 50; }
+
+        .obj-garage { left: 10%; top: 18%; width: 14%; }
+        .obj-table  { left: 34%; bottom: 10%; width: 30%; height: 16%; }
+        .obj-desk   { right: 12%; bottom: 12%; width: 18%; height: 12%; }
+
+        .obj-auth { left: 38%; top: 12%; width: 22%; height: 32%; background: #050505; border: 10px solid #1c222b; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 50px rgba(0,0,0,1); }
+        .obj-auth.locked { cursor: not-allowed; filter: brightness(0.5); }
+        .obj-auth.ready { border-color: var(--google-green); cursor: pointer; }
+        .auth-svg-text { width: 80%; height: auto; }
+
+        .deco { position: absolute; pointer-events: none; z-index: 25; }
+
+        /* =============================================
+           ANIMATIONS — 전부 수정
+           ============================================= */
+
+        /* 구름: 창문 안에서 천천히 흘러가는 느낌 */
+        @keyframes cloud-flow {
+            0%   { left: -90px; opacity: 0; }
+            8%   { opacity: 0.55; }
+            92%  { opacity: 0.55; }
+            100% { left: 110%; opacity: 0; }
         }
 
-        .window {
-            position: absolute; top: 8%; right: 12%; width: 18%; height: 22%;
-            background: linear-gradient(180deg, #87CEEB 0%, #c9e8f5 60%, #E8F5E9 100%);
-            border: 6px solid #2d333d; border-radius: 4px; overflow: hidden;
-        }
-        .mountain {
-            position: absolute; bottom: 0; width: 100%; height: 55%;
-            background: linear-gradient(180deg, #4CAF50 0%, #2E7D32 100%);
-            clip-path: polygon(0% 100%, 20% 40%, 40% 65%, 60% 20%, 80% 50%, 100% 100%);
-        }
-        /* Sun inside window */
-        .sun {
-            position: absolute; top: 12%; right: 15%;
-            width: 18%; height: 25%;
-            background: radial-gradient(circle, #FFE082, #FFCA28);
-            border-radius: 50%;
-            box-shadow: 0 0 8px 3px rgba(255, 202, 40, 0.5);
+        /* 자전거: 화면 왼쪽에서 오른쪽으로 부드럽게 통과 */
+        @keyframes bike-ride {
+            0%   { left: -110px; }
+            100% { left: calc(100% + 20px); }
         }
 
-        .room-floor {
-            position: absolute; bottom: 0; width: 100%; height: 22%;
-            background: #1c222b; border-top: 2px solid #2d333d;
-            background-image: repeating-linear-gradient(90deg, #242a35 0px, #242a35 1px, transparent 1px, transparent 50px);
-        }
-
-        /* ===== ANIMATIONS ===== */
-
-        /* Float: gentle vertical bob */
-        @keyframes float {
-            0%   { transform: translateY(0px); }
-            30%  { transform: translateY(-8px); }
-            60%  { transform: translateY(-4px); }
-            100% { transform: translateY(0px); }
-        }
-
-        /* Wheel spin */
-        @keyframes rotate-wheel {
+        /* 바퀴 회전 — transform-box + transform-origin으로 자체 중심 회전 */
+        @keyframes wheel-spin {
             from { transform: rotate(0deg); }
             to   { transform: rotate(360deg); }
         }
 
-        /* Cloud drifts left→right */
-        @keyframes cloud-drift {
-            0%   { left: -12%; opacity: 0; }
-            8%   { opacity: 0.75; }
-            92%  { opacity: 0.75; }
-            100% { left: 112%; opacity: 0; }
+        /* Android: 자연스러운 상하 부유 */
+        @keyframes drift {
+            0%   { transform: translateY(0px);   }
+            40%  { transform: translateY(-9px);  }
+            60%  { transform: translateY(-7px);  }
+            100% { transform: translateY(0px);   }
         }
 
-        /* Subtle bar chart pulse */
-        @keyframes bar-grow {
-            0%, 100% { transform: scaleY(1);   opacity: 0.8; }
-            50%       { transform: scaleY(1.25); opacity: 1;   }
+        /* 오브제 글로우 효과 */
+        @keyframes pulse-glow {
+            0%   { opacity: 0.5; }
+            100% { opacity: 1.0; }
         }
 
-        /* Auth screen idle glow */
-        @keyframes auth-idle {
-            0%, 100% { box-shadow: 0 0 20px rgba(66,133,244,0.15); }
-            50%       { box-shadow: 0 0 40px rgba(66,133,244,0.35); }
+        /* 승리 쿠키 팝 */
+        @keyframes cookie-pop {
+            0%   { transform: scale(0) rotate(-45deg); opacity: 0; }
+            70%  { transform: scale(1.1) rotate(10deg); opacity: 1; }
+            100% { transform: scale(1) rotate(0deg); }
         }
 
-        /* ===== DECO & OBJECTS ===== */
-        .deco { position: absolute; pointer-events: none; z-index: 25; }
+        /* 슬라이드업 */
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
+        }
 
-        /* Cloud */
-        .cloud-deco {
+        /* =============================================
+           BIKE — 크기 키우고, 속도 자연스럽게 조정
+           ============================================= */
+        .bike-container {
             position: absolute;
-            top: 10%;
-            left: -12%;
-            width: 70px;
-            pointer-events: none;
+            bottom: 4%;
+            width: 160px;   /* 100px → 160px */
+            height: 90px;
+            animation: bike-ride 16s linear infinite;
             z-index: 26;
-            animation: cloud-drift 18s linear infinite;
         }
-        .cloud-deco:nth-child(2) { top: 18%; animation-delay: 9s; width: 50px; }
 
-        /* Bike: the container just sits; wheels rotate inside */
-        .bike-wheel-rear {
+        /* 바퀴 그룹 — transform-box:fill-box 로 자체 중심 회전 보장
+           속도: 자전거 이동거리(~1400px) / 바퀴둘레(~87px) ÷ 16s ≈ 1.0s/rev */
+        .bike-wheel {
             transform-box: fill-box;
             transform-origin: center;
-            animation: rotate-wheel 2.8s linear infinite;
-        }
-        .bike-wheel-front {
-            transform-box: fill-box;
-            transform-origin: center;
-            animation: rotate-wheel 2.8s linear infinite;
+            animation: wheel-spin 1.05s linear infinite;
         }
 
-        /* Android floats */
-        .android-anim {
-            animation: float 3.2s ease-in-out infinite;
+        /* Android */
+        .android-figure {
+            animation: drift 4s ease-in-out infinite;
+            bottom: 24%; right: 33%; width: 30px;
         }
 
-        /* Clickable objects */
-        .object {
+        /* 구름 */
+        .cloud {
             position: absolute;
-            cursor: pointer;
-            transition: filter 0.35s ease, transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 40;
+            top: 11%;
+            opacity: 0;
+            animation: cloud-flow 22s linear infinite;
         }
-        .object:hover {
-            filter: brightness(1.25) drop-shadow(0 0 12px rgba(255,255,255,0.25));
-            transform: scale(1.06);
-        }
-        .object.solved::after {
-            content: '✓';
-            position: absolute;
-            top: -10px; right: -10px;
-            background: var(--google-green); color: #fff;
-            width: 26px; height: 26px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: bold; border: 2px solid #fff;
-            box-shadow: 0 5px 10px rgba(0,0,0,0.5);
-            z-index: 50;
+        .cloud:nth-child(2) {
+            top: 17%;
+            animation-delay: 11s;
         }
 
-        /* Object positions */
-        .obj-garage { left: 8%;  top: 14%; width: 13%; }
-        .obj-table  { left: 32%; bottom: 8%; width: 32%; height: 18%; }
-        .obj-desk   { right: 10%; bottom: 10%; width: 20%; height: 16%; }
-
-        /* Auth panel (layer 4) */
-        .obj-auth {
-            left: 37%; top: 10%; width: 24%; height: 34%;
-            background: #050505;
-            border: 8px solid #1c222b;
-            border-radius: 12px;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 0 40px rgba(0,0,0,0.9);
-            animation: auth-idle 3s ease-in-out infinite;
-        }
-        .auth-label {
-            font-size: 1.1rem; font-weight: 900;
-            color: #161a21;
-            transition: color 0.6s, text-shadow 0.6s;
-            text-align: center; line-height: 1.3;
-        }
-        .obj-auth.ready {
-            border-color: var(--google-green);
-            cursor: pointer;
-        }
-        .obj-auth.ready .auth-label {
-            color: #fff;
-            text-shadow: 0 0 18px var(--google-green);
-        }
-
-        /* Bar chart transform origin fix */
-        .bar { transform-origin: bottom center; }
-
-        /* ===== UI PANELS ===== */
-        .inventory {
-            background: var(--bg-panel); border-radius: 16px;
-            border: 1px solid var(--border-subtle);
-            padding: 0.8rem; margin-bottom: 0.8rem;
-            border-left: 5px solid var(--google-blue);
-        }
+        /* --- UI Panels --- */
+        .inventory { background: var(--bg-panel); border-radius: 16px; border: 1px solid var(--border-subtle); padding: 0.8rem; margin-bottom: 0.8rem; border-top: 3px solid #333; }
         .inv-title { font-size: 0.65rem; color: var(--text-dim); text-align: center; margin-bottom: 0.6rem; letter-spacing: 2px; font-weight: bold; }
-        .inv-grid { display: flex; gap: 0.8rem; justify-content: center; }
-        .inv-slot {
-            width: 50px; height: 50px;
-            background: #13161d;
-            border: 2px dashed #2d333d;
-            border-radius: 12px;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .inv-slot.filled { border-style: solid; border-color: var(--google-yellow); background: rgba(251,188,4,0.05); }
+        .inv-grid { display: flex; gap: 1rem; justify-content: center; }
+        .inv-slot { width: 50px; height: 50px; background: #13161d; border: 2px dashed #2d333d; border-radius: 12px; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
+        .slot-blue.filled   { border-style: solid; border-color: var(--google-blue);   background: rgba(66,133,244,0.05); }
+        .slot-red.filled    { border-style: solid; border-color: var(--google-red);    background: rgba(234,67,53,0.05); }
+        .slot-yellow.filled { border-style: solid; border-color: var(--google-yellow); background: rgba(251,188,4,0.05); }
+        .slot-green.filled  { border-style: solid; border-color: var(--google-green);  background: rgba(52,168,83,0.05); }
 
-        .log {
-            background: var(--bg-panel); border: 1px solid var(--border-subtle);
-            border-radius: 16px; padding: 1rem;
-            height: 100px; overflow-y: auto;
-            font-size: 0.85rem; border-left: 5px solid var(--google-red);
-        }
+        .log { background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 1rem; height: 100px; overflow-y: auto; font-size: 0.85rem; border-left: 6px solid; border-image: linear-gradient(to bottom, var(--google-blue), var(--google-red), var(--google-yellow), var(--google-green)) 1; }
         .msg { padding: 0.3rem 0; border-bottom: 1px solid rgba(255,255,255,0.02); color: var(--text-dim); }
         .msg.success   { color: var(--google-green); font-weight: bold; }
         .msg.important { color: var(--google-yellow); font-weight: bold; }
 
-        /* ===== MODALS ===== */
-        .modal {
-            display: none; position: fixed; top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.97);
-            z-index: 2000;
-            align-items: center; justify-content: center;
+        /* --- Buttons & Inputs --- */
+        .go-btn {
+            width: 100%; padding: 1.1rem; color: #fff; border: none; border-radius: 16px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.3s;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
         }
+        .go-btn:hover { transform: translateY(-3px); filter: brightness(1.1); box-shadow: 0 15px 30px rgba(0,0,0,0.4); }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.97); z-index: 2000; align-items: center; justify-content: center; }
         .modal.active { display: flex; }
-        .panel {
-            background: var(--bg-panel); padding: 2.2rem;
-            border-radius: 28px; border: 2px solid var(--border-subtle);
-            width: 94%; max-width: 480px; position: relative;
-            text-align: center; box-shadow: 0 40px 80px rgba(0,0,0,0.9);
-        }
-        .panel::before {
-            content: ''; position: absolute;
-            top: -2px; left: -2px; right: -2px; height: 8px;
-            background: linear-gradient(to right, var(--google-blue), var(--google-red), var(--google-yellow), var(--google-green));
-            border-radius: 28px 28px 0 0;
-        }
-        .close-x {
-            position: absolute; top: 20px; right: 25px;
-            background: none; border: none; color: #fff;
-            font-size: 2rem; cursor: pointer; opacity: 0.3; transition: 0.3s;
-        }
-        .close-x:hover { opacity: 1; }
-
+        .panel { background: var(--bg-panel); padding: 2.2rem; border-radius: 28px; border: 2px solid var(--border-subtle); width: 94%; max-width: 480px; position: relative; text-align: center; }
+        .panel-header-line { position: absolute; top: -2px; left: -2px; right: -2px; height: 8px; border-radius: 28px 28px 0 0; }
+        .close-x { position: absolute; top: 20px; right: 25px; background: none; border: none; color: #fff; font-size: 2rem; cursor: pointer; opacity: 0.3; transition: 0.3s; }
         .m-box { background: #13161d; border: 1px solid #2d333d; border-radius: 18px; padding: 1.5rem; margin-bottom: 1rem; text-align: left; }
-        .m-label { font-size: 0.7rem; color: var(--google-blue); font-weight: bold; margin-bottom: 6px; text-transform: uppercase; }
         .input { width: 100%; padding: 0.8rem; background: #080a0d; border: 2px solid #2d333d; color: #fff; font-size: 1.1rem; border-radius: 12px; outline: none; }
-        .input:focus { border-color: var(--google-blue); }
-        .go-btn { width: 100%; padding: 1rem; background: var(--google-blue); color: #fff; border: none; border-radius: 14px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: filter 0.2s; }
-        .go-btn:hover { filter: brightness(1.15); }
 
-        /* ===== VICTORY ===== */
-        .victory {
-            display: none; position: fixed; top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(10,12,16,0.99);
-            z-index: 5000;
-            align-items: center; justify-content: center;
-            flex-direction: column; text-align: center; padding: 2rem;
-        }
+        /* --- Victory --- */
+        .victory { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10,12,16,0.99); z-index: 5000; align-items: center; justify-content: center; flex-direction: column; text-align: center; padding: 2rem; }
         .victory.active { display: flex; }
-        .v-card {
-            background: white; color: #111;
-            padding: 2.5rem; border-radius: 40px;
-            max-width: 600px; width: 95%;
-            box-shadow: 0 50px 100px rgba(0,0,0,0.7);
-            position: relative; overflow: hidden;
-        }
-        .v-card::after {
-            content: ''; position: absolute; top: 0; left: 0;
-            width: 100%; height: 10px;
-            background: linear-gradient(to right, var(--google-blue), var(--google-red), var(--google-yellow), var(--google-green));
-        }
-        .cookie-gift {
-            width: 150px; height: 150px; margin: 0 auto 1.2rem;
-            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.2));
-            animation: float 3s infinite ease-in-out;
-        }
+        .v-card { background: white; color: #111; padding: 2.5rem; border-radius: 40px; max-width: 600px; width: 95%; box-shadow: 0 50px 100px rgba(0,0,0,0.7); position: relative; overflow: hidden; }
+        .v-card::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 10px; background: linear-gradient(to right, var(--google-blue), var(--google-red), var(--google-yellow), var(--google-green)); }
+        .cookie-gift { width: 150px; height: 150px; margin: 0 auto 1.2rem; animation: cookie-pop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
         #confetti-canvas { position: fixed; inset: 0; z-index: 4999; pointer-events: none; }
 
-        /* ===== HINT ===== */
-        .hint-toggle {
-            position: fixed; bottom: 30px; right: 30px;
-            width: 55px; height: 55px;
-            background: var(--bg-panel); border: 2px solid var(--google-yellow);
-            border-radius: 50%; color: var(--google-yellow);
-            font-size: 1.8rem; cursor: pointer;
-            z-index: 100; display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
-        }
-        .hint-pop {
-            display: none; position: fixed; bottom: 95px; right: 30px;
-            background: var(--bg-panel); border: 1px solid var(--google-yellow);
-            border-radius: 24px; padding: 1.5rem; max-width: 300px;
-            z-index: 100; box-shadow: 0 30px 60px rgba(0,0,0,0.9); text-align: center;
-        }
-        .hint-pop.active { display: block; }
+        .hint-toggle { position: fixed; bottom: 30px; right: 30px; width: 55px; height: 55px; background: var(--bg-panel); border: 2px solid var(--google-yellow); border-radius: 50%; color: var(--google-yellow); font-size: 1.8rem; cursor: pointer; z-index: 100; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(0,0,0,0.6); transition: transform 0.2s; }
+        .hint-pop { display: none; position: fixed; bottom: 95px; right: 30px; background: var(--bg-panel); border: 1px solid var(--google-yellow); border-radius: 24px; padding: 1.5rem; max-width: 300px; z-index: 100; box-shadow: 0 30px 60px rgba(0,0,0,0.9); text-align: center; }
+        .hint-pop.active { display: block; animation: slideUp 0.4s ease; }
 
+        /* ─── 반응형: 화면 크기별 룸 높이 조정 ─── */
+        /* 큰 화면 (데스크탑) */
+        @media (min-width: 1100px) {
+            .room-view { max-height: 68vh; }
+        }
+        /* 중간 화면 (태블릿 가로) */
+        @media (max-width: 1099px) and (min-width: 769px) {
+            .room-view { max-height: 58vh; }
+        }
+        /* 작은 화면 (태블릿 세로 / 모바일) — 스크롤로 전체 확인 */
         @media (max-width: 768px) {
-            .room-view { max-height: 32vh; }
+            .room-view { max-height: none; } /* 비율 100% 유지, 스크롤로 처리 */
             .v-card { padding: 1.5rem; }
+            .game-title { font-size: 1.1rem; }
+            .game-container { padding: 0.6rem; }
+            .bike-container { width: 110px; height: 65px; }
+        }
+        @media (max-width: 480px) {
+            .room-view { max-height: none; }
+            .android-figure { width: 22px; }
         }
     </style>
 </head>
@@ -353,235 +294,251 @@
     <div class="ambient"></div>
     <canvas id="confetti-canvas"></canvas>
 
+    <!-- --- Intro Screen --- -->
+    <div id="intro-screen">
+        <div class="intro-card">
+            <p class="intro-welcome">방탈출에 오신걸 환영합니다</p>
+            <h1 class="intro-title">당신은 Google for Startups' ROOM에 갇혔습니다.</h1>
+            <p class="intro-subtitle">Alumni Summit with Google DeepMind</p>
+            <p class="intro-desc">이곳을 탈출해주세요</p>
+            <button class="go-btn" style="background: var(--google-blue); max-width: 200px;" onclick="startGame()">시작</button>
+        </div>
+    </div>
+
     <header>
         <h1 class="game-title">Google for Startups' ROOM<span>Alumni Summit with Google DeepMind</span></h1>
     </header>
 
     <div class="status-bar">
-        <div class="status-item"><div class="status-label">STEPS</div><div class="status-value"><span id="solved-count">0</span>/4</div></div>
-        <div class="status-item"><div class="status-label">TIME</div><div class="status-value" id="timer">00:00</div></div>
-        <div class="status-item"><div class="status-label">HINTS</div><div class="status-value" id="hints-used">0</div></div>
+        <div class="status-item"><div class="status-label">STEPS</div><div class="status-value val-blue"><span id="solved-count">0</span>/4</div></div>
+        <div class="status-item"><div class="status-label">ELAPSED</div><div class="status-value val-red" id="timer">00:00</div></div>
+        <div class="status-item"><div class="status-label">HINT COUNT</div><div class="status-value val-green" id="hints-used">0</div></div>
     </div>
 
     <main class="game-container">
         <div class="room-view">
             <div class="room-wall"></div>
-
-            <!-- Window with sky & mountains -->
-            <div class="window">
-                <div class="sun"></div>
-                <div class="mountain"></div>
-            </div>
-
-            <!-- Floor -->
+            <div class="window"><div class="mountain"></div></div>
             <div class="room-floor"></div>
 
-            <!-- ═══ DECO: Clouds (simple ellipse-based shapes) ═══ -->
-            <svg class="cloud-deco" viewBox="0 0 90 55" xmlns="http://www.w3.org/2000/svg">
-                <ellipse cx="45" cy="42" rx="40" ry="13" fill="white"/>
-                <ellipse cx="28" cy="34" rx="20" ry="15" fill="white"/>
-                <ellipse cx="52" cy="30" rx="24" ry="18" fill="white"/>
-                <ellipse cx="40" cy="25" rx="16" ry="13" fill="white"/>
+            <!-- ─── 구름 1: 타원 3개로 자연스러운 구름 형태 ─── -->
+            <svg class="cloud" style="width: 72px;" viewBox="0 0 90 50" xmlns="http://www.w3.org/2000/svg">
+                <ellipse cx="45" cy="38" rx="38" ry="12" fill="white"/>
+                <ellipse cx="28" cy="30" rx="20" ry="15" fill="white"/>
+                <ellipse cx="52" cy="26" rx="24" ry="18" fill="white"/>
+                <ellipse cx="40" cy="20" rx="16" ry="13" fill="white"/>
             </svg>
-            <svg class="cloud-deco" viewBox="0 0 70 42" xmlns="http://www.w3.org/2000/svg" style="animation-delay: 9s; width: 52px;">
-                <ellipse cx="35" cy="32" rx="30" ry="10" fill="white"/>
-                <ellipse cx="22" cy="25" rx="15" ry="11" fill="white"/>
-                <ellipse cx="40" cy="22" rx="18" ry="13" fill="white"/>
-                <ellipse cx="30" cy="18" rx="12" ry="10" fill="white"/>
+            <!-- 구름 2: 약간 다른 크기, 딜레이로 번갈아 등장 -->
+            <svg class="cloud" style="width: 50px; animation-delay: 11s;" viewBox="0 0 70 40" xmlns="http://www.w3.org/2000/svg">
+                <ellipse cx="35" cy="30" rx="28" ry="10" fill="white"/>
+                <ellipse cx="22" cy="23" rx="16" ry="12" fill="white"/>
+                <ellipse cx="42" cy="20" rx="18" ry="14" fill="white"/>
+                <ellipse cx="32" cy="14" rx="12" ry="10" fill="white"/>
             </svg>
 
-            <!-- ═══ DECO: Google Bike (wheels have spokes → rotation is visible) ═══ -->
-            <div class="deco" style="bottom: 4%; left: 2%; width: 95px;">
-                <svg viewBox="0 0 105 65" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Rear wheel centered at (20,45) -->
-                    <g class="bike-wheel-rear" transform="translate(20,45)">
-                        <circle cx="0" cy="0" r="16" fill="none" stroke="var(--google-red)" stroke-width="2"/>
-                        <line x1="0" y1="-16" x2="0"   y2="16"  stroke="var(--google-red)" stroke-width="1" opacity="0.65"/>
-                        <line x1="-16" y1="0" x2="16"  y2="0"   stroke="var(--google-red)" stroke-width="1" opacity="0.65"/>
-                        <line x1="-11.3" y1="-11.3" x2="11.3" y2="11.3" stroke="var(--google-red)" stroke-width="1" opacity="0.65"/>
-                        <line x1="-11.3" y1="11.3"  x2="11.3" y2="-11.3" stroke="var(--google-red)" stroke-width="1" opacity="0.65"/>
-                        <circle cx="0" cy="0" r="3" fill="var(--google-red)"/>
-                    </g>
-                    <!-- Front wheel centered at (83,45) -->
-                    <g class="bike-wheel-front" transform="translate(83,45)">
-                        <circle cx="0" cy="0" r="16" fill="none" stroke="var(--google-blue)" stroke-width="2"/>
-                        <line x1="0" y1="-16" x2="0"   y2="16"  stroke="var(--google-blue)" stroke-width="1" opacity="0.65"/>
-                        <line x1="-16" y1="0" x2="16"  y2="0"   stroke="var(--google-blue)" stroke-width="1" opacity="0.65"/>
-                        <line x1="-11.3" y1="-11.3" x2="11.3" y2="11.3" stroke="var(--google-blue)" stroke-width="1" opacity="0.65"/>
-                        <line x1="-11.3" y1="11.3"  x2="11.3" y2="-11.3" stroke="var(--google-blue)" stroke-width="1" opacity="0.65"/>
-                        <circle cx="0" cy="0" r="3" fill="var(--google-blue)"/>
-                    </g>
-                    <!-- Frame: bottom bracket → seat tube, chain stay, down tube, top tube, fork -->
-                    <path d="M20 45 L50 45 L72 18 M50 45 L42 18 M30 18 L72 18"
-                          fill="none" stroke="var(--google-green)" stroke-width="2.5" stroke-linejoin="round"/>
-                    <!-- Seat -->
-                    <line x1="46" y1="20" x2="56" y2="20" stroke="var(--google-yellow)" stroke-width="3" stroke-linecap="round"/>
-                    <line x1="51" y1="20" x2="50" y2="30" stroke="var(--google-yellow)" stroke-width="1.5"/>
-                    <!-- Handlebar -->
-                    <line x1="71" y1="18" x2="76" y2="12" stroke="var(--google-red)" stroke-width="2.5" stroke-linecap="round"/>
-                    <!-- Pedal crank (static) -->
-                    <circle cx="50" cy="45" r="3.5" fill="var(--google-yellow)"/>
+            <!-- Layer 1: Garage -->
+            <svg class="object obj-garage" id="layer1" onclick="openLayer('layer1')" viewBox="0 0 200 250">
+                <rect x="5" y="5" width="190" height="240" fill="#1a1a1a" rx="5" filter="drop-shadow(5px 5px 10px black)"/>
+                <rect x="20" y="20" width="160" height="160" fill="#222" stroke="var(--google-blue)" stroke-width="1"/>
+                <text x="100" y="220" text-anchor="middle" fill="#666" font-size="12" font-family="JetBrains Mono, monospace">FOUNDATION 1998</text>
+                <path d="M70 140 L100 110 L130 140 Z" fill="var(--google-blue)" opacity="0.3"/>
+            </svg>
+
+            <!-- Layer 2: Table -->
+            <div class="object obj-table" id="layer2" onclick="openLayer('layer2')">
+                <div style="position: absolute; bottom: 100%; left: 0; width: 100%; display: flex; justify-content: space-around; align-items: flex-end; padding-bottom: 5px;">
+                    <!-- 소품: 피규어 -->
+                    <svg style="width: 20px; height: 35px;" viewBox="0 0 50 100">
+                        <ellipse cx="25" cy="20" rx="15" ry="18" fill="#cbd5e1"/>
+                        <rect x="10" y="40" width="30" height="60" rx="5" fill="#94a3b8"/>
+                    </svg>
+
+                    <!-- 모니터: 막대 y좌표 수정 (바닥 y=55 기준으로 위로 성장) -->
+                    <svg style="width: 80px; height: 65px;" viewBox="0 0 120 100">
+                        <!-- 모니터 베젤 -->
+                        <rect x="10" y="5" width="100" height="60" rx="4" fill="#2a2e35"/>
+                        <!-- 스크린 -->
+                        <rect x="15" y="10" width="90" height="50" rx="2" fill="#000"/>
+                        <!-- 막대 1 (파랑) — y="55" 기준으로 위로 성장 -->
+                        <rect x="25" y="55" width="9" height="1" fill="var(--google-blue)">
+                            <animate attributeName="height" values="1;18;1"  dur="2.0s" repeatCount="indefinite"/>
+                            <animate attributeName="y"      values="55;37;55" dur="2.0s" repeatCount="indefinite"/>
+                        </rect>
+                        <!-- 막대 2 (빨강) -->
+                        <rect x="39" y="55" width="9" height="1" fill="var(--google-red)">
+                            <animate attributeName="height" values="1;28;1"  dur="1.5s" repeatCount="indefinite"/>
+                            <animate attributeName="y"      values="55;27;55" dur="1.5s" repeatCount="indefinite"/>
+                        </rect>
+                        <!-- 막대 3 (노랑) -->
+                        <rect x="53" y="55" width="9" height="1" fill="var(--google-yellow)">
+                            <animate attributeName="height" values="1;22;1"  dur="2.4s" repeatCount="indefinite"/>
+                            <animate attributeName="y"      values="55;33;55" dur="2.4s" repeatCount="indefinite"/>
+                        </rect>
+                        <!-- 막대 4 (초록) -->
+                        <rect x="67" y="55" width="9" height="1" fill="var(--google-green)">
+                            <animate attributeName="height" values="1;14;1"  dur="1.8s" repeatCount="indefinite"/>
+                            <animate attributeName="y"      values="55;41;55" dur="1.8s" repeatCount="indefinite"/>
+                        </rect>
+                        <!-- 목 + 받침 -->
+                        <rect x="55" y="65" width="10" height="15" fill="#2a2e35"/>
+                        <rect x="40" y="80" width="40" height="3" rx="2" fill="#1c1f24"/>
+                    </svg>
+
+                    <!-- 화이트보드 -->
+                    <svg style="width: 50px; height: 35px;" viewBox="0 0 100 70">
+                        <rect x="0" y="0" width="100" height="70" fill="white" stroke="#333" stroke-width="3"/>
+                    </svg>
+                </div>
+                <div style="width:100%; height:100%; background:rgba(255,255,255,0.04); border-top: 3px solid var(--google-red); border-radius: 6px;"></div>
+            </div>
+
+            <!-- Layer 3: Tablet -->
+            <div class="object obj-desk" id="layer3" onclick="openLayer('layer3')">
+                <div style="position: absolute; top: -38px; left: 50%; transform: translateX(-50%); width: 65px; height: 42px; background: #000; border: 3px solid var(--google-yellow); border-radius: 10px; overflow: hidden; box-shadow: 0 0 25px rgba(251, 188, 4, 0.3);">
+                    <div style="position: absolute; inset: 0; background: linear-gradient(135deg, #332b00, #FBBC04); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #fff;">
+                        <span style="animation: pulse-glow 2s ease-in-out infinite alternate;">98%</span>
+                    </div>
+                </div>
+                <!-- 받침 -->
+                <div style="width:100%; height:100%; background:rgba(255,255,255,0.04); border-top:2px solid #4a5568; border-radius:6px;"></div>
+            </div>
+
+            <!-- Layer 4: Final Screen -->
+            <div class="obj-auth locked" id="layer4" onclick="openLayer('layer4')">
+                <svg class="auth-svg-text" viewBox="0 0 200 80">
+                    <text x="50%" y="40%" dominant-baseline="middle" text-anchor="middle" class="auth-label" fill="currentColor">SUMMIT</text>
+                    <text x="50%" y="70%" dominant-baseline="middle" text-anchor="middle" class="auth-label" fill="currentColor">AUTH</text>
                 </svg>
             </div>
 
-            <!-- ═══ DECO: Android Mascot (floats) ═══ -->
-            <div class="deco android-anim" style="bottom: 22%; right: 30%; width: 30px;">
+            <!-- ─── Google Bike: 160px, 스포크 8방향, 자연스러운 비율 ─── -->
+            <div class="bike-container">
+                <!--
+                    viewBox="0 0 140 80"
+                    뒷바퀴 중심: (22, 58)  r=18
+                    앞바퀴 중심: (118, 58) r=18
+                    페달 허브:   (70, 58)
+                -->
+                <svg viewBox="0 0 140 80" style="width:100%;height:100%;" xmlns="http://www.w3.org/2000/svg">
+
+                    <!-- ── 뒷바퀴: translate로 (0,0) 기준 → 자체 중심 회전 ── -->
+                    <g class="bike-wheel" transform="translate(22,58)">
+                        <!-- 타이어 -->
+                        <circle cx="0" cy="0" r="18" fill="none" stroke="var(--google-red)" stroke-width="2.5"/>
+                        <!-- 림(rim) -->
+                        <circle cx="0" cy="0" r="13" fill="none" stroke="var(--google-red)" stroke-width="0.8" opacity="0.4"/>
+                        <!-- 스포크 8방향 -->
+                        <line x1="0"    y1="-18" x2="0"    y2="18"   stroke="var(--google-red)" stroke-width="1.2" opacity="0.75"/>
+                        <line x1="-18"  y1="0"   x2="18"   y2="0"    stroke="var(--google-red)" stroke-width="1.2" opacity="0.75"/>
+                        <line x1="-12.7" y1="-12.7" x2="12.7" y2="12.7" stroke="var(--google-red)" stroke-width="1.2" opacity="0.75"/>
+                        <line x1="-12.7" y1="12.7"  x2="12.7" y2="-12.7" stroke="var(--google-red)" stroke-width="1.2" opacity="0.75"/>
+                        <!-- 허브 -->
+                        <circle cx="0" cy="0" r="3.5" fill="var(--google-red)"/>
+                    </g>
+
+                    <!-- ── 앞바퀴 ── -->
+                    <g class="bike-wheel" transform="translate(118,58)">
+                        <circle cx="0" cy="0" r="18" fill="none" stroke="var(--google-blue)" stroke-width="2.5"/>
+                        <circle cx="0" cy="0" r="13" fill="none" stroke="var(--google-blue)" stroke-width="0.8" opacity="0.4"/>
+                        <line x1="0"    y1="-18" x2="0"    y2="18"   stroke="var(--google-blue)" stroke-width="1.2" opacity="0.75"/>
+                        <line x1="-18"  y1="0"   x2="18"   y2="0"    stroke="var(--google-blue)" stroke-width="1.2" opacity="0.75"/>
+                        <line x1="-12.7" y1="-12.7" x2="12.7" y2="12.7" stroke="var(--google-blue)" stroke-width="1.2" opacity="0.75"/>
+                        <line x1="-12.7" y1="12.7"  x2="12.7" y2="-12.7" stroke="var(--google-blue)" stroke-width="1.2" opacity="0.75"/>
+                        <circle cx="0" cy="0" r="3.5" fill="var(--google-blue)"/>
+                    </g>
+
+                    <!-- ── 프레임: 체인스테이, 시트튜브, 다운튜브, 탑튜브, 포크 ── -->
+                    <!-- 체인스테이 (뒷바퀴 → 페달박스) -->
+                    <line x1="22" y1="58" x2="70" y2="58" stroke="var(--google-green)" stroke-width="2.8" stroke-linecap="round"/>
+                    <!-- 시트튜브 (페달박스 → 시트포스트 상단) -->
+                    <line x1="70" y1="58" x2="58" y2="22" stroke="var(--google-green)" stroke-width="2.8" stroke-linecap="round"/>
+                    <!-- 다운튜브 (헤드튜브 → 페달박스) -->
+                    <line x1="104" y1="22" x2="70" y2="58" stroke="var(--google-green)" stroke-width="2.8" stroke-linecap="round"/>
+                    <!-- 탑튜브 (시트 상단 → 헤드튜브) -->
+                    <line x1="58" y1="22" x2="104" y2="22" stroke="var(--google-green)" stroke-width="2.2" stroke-linecap="round"/>
+                    <!-- 시트스테이 (시트 상단 → 뒷바퀴) -->
+                    <line x1="58" y1="22" x2="22" y2="58" stroke="var(--google-green)" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+                    <!-- 포크 (헤드튜브 → 앞바퀴) -->
+                    <line x1="104" y1="22" x2="118" y2="58" stroke="var(--google-green)" stroke-width="2.2" stroke-linecap="round"/>
+
+                    <!-- ── 페달 크랭크 허브 ── -->
+                    <circle cx="70" cy="58" r="5" fill="var(--google-yellow)" stroke="var(--google-green)" stroke-width="1"/>
+
+                    <!-- ── 안장 ── -->
+                    <line x1="52" y1="20" x2="67" y2="20" stroke="var(--google-yellow)" stroke-width="3.5" stroke-linecap="round"/>
+                    <line x1="59" y1="20" x2="58" y2="29" stroke="var(--google-yellow)" stroke-width="2"/>
+
+                    <!-- ── 핸들바 ── -->
+                    <line x1="104" y1="22" x2="110" y2="14" stroke="var(--google-red)" stroke-width="3" stroke-linecap="round"/>
+                    <line x1="106" y1="14" x2="114" y2="14" stroke="var(--google-red)" stroke-width="2.5" stroke-linecap="round"/>
+
+                    <!-- ── 라이더 실루엣 (단순 원+몸통) ── -->
+                    <!-- 헬멧/머리 -->
+                    <ellipse cx="63" cy="12" rx="7" ry="6" fill="var(--google-blue)" opacity="0.85"/>
+                    <!-- 상체 -->
+                    <line x1="63" y1="18" x2="75" y2="28" stroke="var(--google-blue)" stroke-width="3.5" stroke-linecap="round" opacity="0.85"/>
+                    <!-- 팔 (핸들 방향) -->
+                    <line x1="63" y1="18" x2="106" y2="16" stroke="var(--google-blue)" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+                </svg>
+            </div>
+
+            <!-- ─── Floating Android: 팔·다리 추가, 비율 수정 ─── -->
+            <div class="deco android-figure">
                 <svg viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Antennae -->
+                    <!-- 더듬이 -->
                     <line x1="34" y1="36" x2="22" y2="16" stroke="#A4C639" stroke-width="5" stroke-linecap="round"/>
                     <circle cx="22" cy="14" r="4" fill="#A4C639"/>
                     <line x1="66" y1="36" x2="78" y2="16" stroke="#A4C639" stroke-width="5" stroke-linecap="round"/>
                     <circle cx="78" cy="14" r="4" fill="#A4C639"/>
-                    <!-- Head (rounded top) -->
+                    <!-- 머리 (반원) -->
                     <path d="M20 48 Q20 28 50 28 Q80 28 80 48 L80 58 Q80 64 70 64 L30 64 Q20 64 20 58 Z" fill="#A4C639"/>
-                    <!-- Eyes -->
+                    <!-- 눈 -->
                     <circle cx="36" cy="46" r="4.5" fill="white"/>
                     <circle cx="64" cy="46" r="4.5" fill="white"/>
-                    <!-- Body -->
-                    <rect x="14" y="67" width="72" height="46" rx="9" fill="#A4C639"/>
-                    <!-- Chest stripe -->
-                    <rect x="30" y="75" width="40" height="3" rx="1.5" fill="rgba(255,255,255,0.25)"/>
-                    <!-- Left arm -->
-                    <rect x="2"  y="67" width="11" height="36" rx="5.5" fill="#A4C639"/>
-                    <!-- Right arm -->
-                    <rect x="87" y="67" width="11" height="36" rx="5.5" fill="#A4C639"/>
-                    <!-- Left leg -->
-                    <rect x="22" y="109" width="20" height="14" rx="6" fill="#A4C639"/>
-                    <!-- Right leg -->
-                    <rect x="58" y="109" width="20" height="14" rx="6" fill="#A4C639"/>
+                    <!-- 몸통 -->
+                    <rect x="14" y="67" width="72" height="44" rx="9" fill="#A4C639"/>
+                    <!-- 왼팔 -->
+                    <rect x="2"  y="67" width="11" height="33" rx="5.5" fill="#A4C639"/>
+                    <!-- 오른팔 -->
+                    <rect x="87" y="67" width="11" height="33" rx="5.5" fill="#A4C639"/>
+                    <!-- 왼다리 -->
+                    <rect x="22" y="107" width="20" height="14" rx="6" fill="#A4C639"/>
+                    <!-- 오른다리 -->
+                    <rect x="58" y="107" width="20" height="14" rx="6" fill="#A4C639"/>
                 </svg>
             </div>
 
-            <!-- ═══ Layer 1: Garage Photo ═══ -->
-            <svg class="object obj-garage" id="layer1" onclick="openLayer('layer1')" viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg">
-                <!-- Photo frame -->
-                <rect x="4" y="4"   width="192" height="252" rx="6" fill="#c8a86b"/>
-                <rect x="14" y="14" width="172" height="232" rx="4" fill="#1a1a1a"/>
-                <!-- Photo interior: simple garage sketch -->
-                <rect x="22" y="22" width="156" height="150" rx="3" fill="#2a2e38"/>
-                <!-- Garage door -->
-                <rect x="50" y="90" width="100" height="80" fill="#3a3f4b" rx="2"/>
-                <line x1="50" y1="110" x2="150" y2="110" stroke="#555" stroke-width="1.5"/>
-                <line x1="50" y1="130" x2="150" y2="130" stroke="#555" stroke-width="1.5"/>
-                <line x1="50" y1="150" x2="150" y2="150" stroke="#555" stroke-width="1.5"/>
-                <!-- Roof triangle -->
-                <path d="M36 90 L100 45 L164 90 Z" fill="#4a5568"/>
-                <!-- Door handle -->
-                <circle cx="100" cy="168" r="5" fill="#888"/>
-                <!-- Caption -->
-                <rect x="14" y="188" width="172" height="46" rx="4" fill="#0a0c10"/>
-                <text x="100" y="206" text-anchor="middle" fill="#9ca3af" font-size="9" font-family="'JetBrains Mono', monospace">MENLO PARK, CALIFORNIA</text>
-                <text x="100" y="222" text-anchor="middle" fill="#6b7280" font-size="8" font-family="sans-serif">FOUNDATION 1998</text>
-            </svg>
-
-            <!-- ═══ Layer 2: Table with Desktop ═══ -->
-            <div class="object obj-table" id="layer2" onclick="openLayer('layer2')">
-                <!-- Items sitting on the table surface -->
-                <div style="position:absolute; bottom:100%; left:0; width:100%; display:flex; justify-content:space-around; align-items:flex-end; padding-bottom:4px;">
-
-                    <!-- Figurine/trophy -->
-                    <svg style="width:18px; height:34px; flex-shrink:0;" viewBox="0 0 50 100" xmlns="http://www.w3.org/2000/svg">
-                        <ellipse cx="25" cy="18" rx="14" ry="16" fill="#cbd5e1"/>
-                        <rect x="12" y="34" width="26" height="50" rx="5" fill="#94a3b8"/>
-                        <rect x="6"  y="82" width="38" height="7"  rx="3" fill="#64748b"/>
-                    </svg>
-
-                    <!-- Monitor (modern flat screen) -->
-                    <svg style="width:90px; height:72px; flex-shrink:0;" viewBox="0 0 130 105" xmlns="http://www.w3.org/2000/svg">
-                        <!-- Monitor bezel -->
-                        <rect x="5" y="5" width="120" height="74" rx="5" fill="#2a2e35"/>
-                        <!-- Screen area -->
-                        <rect x="12" y="11" width="106" height="61" rx="3" fill="#0a0c12"/>
-                        <!-- Bar chart (animated via inline style) -->
-                        <rect class="bar" x="26" y="50" width="11" height="16" fill="var(--google-blue)"
-                              style="animation: bar-grow 1.0s ease-in-out infinite alternate;"/>
-                        <rect class="bar" x="42" y="38" width="11" height="28" fill="var(--google-red)"
-                              style="animation: bar-grow 1.3s ease-in-out infinite alternate;"/>
-                        <rect class="bar" x="58" y="26" width="11" height="40" fill="var(--google-yellow)"
-                              style="animation: bar-grow 0.9s ease-in-out infinite alternate;"/>
-                        <rect class="bar" x="74" y="44" width="11" height="22" fill="var(--google-green)"
-                              style="animation: bar-grow 1.5s ease-in-out infinite alternate;"/>
-                        <rect class="bar" x="90" y="32" width="11" height="34" fill="var(--google-blue)"
-                              style="animation: bar-grow 1.1s ease-in-out infinite alternate;"/>
-                        <!-- Monitor neck + base -->
-                        <rect x="60" y="79" width="10" height="14" fill="#2a2e35"/>
-                        <rect x="42" y="93" width="46" height="4"  rx="2" fill="#1c1f24"/>
-                    </svg>
-
-                    <!-- Small whiteboard -->
-                    <svg style="width:52px; height:40px; flex-shrink:0;" viewBox="0 0 110 80" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="0" y="0" width="110" height="75" rx="3" fill="white" stroke="#4a4a4a" stroke-width="4"/>
-                        <!-- Scribbles on board -->
-                        <path d="M15 25 Q35 15 55 25 Q75 35 95 20" fill="none" stroke="var(--google-blue)" stroke-width="2.5"/>
-                        <line x1="15" y1="50" x2="95" y2="50" stroke="#ccc" stroke-width="1"/>
-                        <line x1="15" y1="60" x2="70" y2="60" stroke="#ccc" stroke-width="1"/>
-                        <!-- Marker tray -->
-                        <rect x="0" y="75" width="110" height="5" rx="1" fill="#888"/>
-                    </svg>
-                </div>
-
-                <!-- Table surface -->
-                <div style="width:100%; height:100%; background:rgba(255,255,255,0.04); border-top:3px solid #4a5568; border-radius:6px;"></div>
-            </div>
-
-            <!-- ═══ Layer 3: Desk with Tablet ═══ -->
-            <div class="object obj-desk" id="layer3" onclick="openLayer('layer3')">
-                <!-- Tablet propped on desk -->
-                <div style="position:absolute; bottom:calc(100% - 2px); left:50%; transform:translateX(-50%); width:72px; height:54px;
-                            background:#0a0c10; border:3px solid #2d333d; border-radius:8px;
-                            overflow:hidden; box-shadow: 0 0 20px rgba(66,133,244,0.35);">
-                    <!-- Tablet screen gradient + percentage -->
-                    <div style="position:absolute; inset:0;
-                                background: linear-gradient(135deg, #1a3a6c, #1a5c3a);
-                                display:flex; align-items:center; justify-content:center;
-                                flex-direction:column; gap:2px;">
-                        <div style="font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700; color:#fff;
-                                    animation: bar-grow 2s ease-in-out infinite alternate;">98%</div>
-                        <div style="width:36px; height:3px; border-radius:2px; background:var(--google-green); opacity:0.8;"></div>
-                    </div>
-                </div>
-                <!-- Desk surface -->
-                <div style="width:100%; height:100%; background:rgba(255,255,255,0.035); border-top:3px solid #4a5568; border-radius:6px;"></div>
-            </div>
-
-            <!-- ═══ Layer 4: Auth Screen ═══ -->
-            <div class="obj-auth object" id="layer4" onclick="openLayer('layer4')">
-                <div class="auth-label">SUMMIT<br>AUTH</div>
-            </div>
-
-        </div><!-- /room-view -->
+        </div>
 
         <div class="inventory">
             <div class="inv-title">ACCESS CLUES</div>
             <div class="inv-grid">
-                <div class="inv-slot" id="slot-1"></div>
-                <div class="inv-slot" id="slot-2"></div>
-                <div class="inv-slot" id="slot-3"></div>
-                <div class="inv-slot" id="slot-4"></div>
+                <div class="inv-slot slot-blue"   id="slot-1"></div>
+                <div class="inv-slot slot-red"    id="slot-2"></div>
+                <div class="inv-slot slot-yellow" id="slot-3"></div>
+                <div class="inv-slot slot-green"  id="slot-4"></div>
             </div>
         </div>
 
         <div class="log" id="message-log">
-            <div class="msg important">Innovation Hub 시스템에 접속했습니다. 4가지 레이어를 해제하고 선물을 받으세요!</div>
+            <div class="msg important">시스템 접속 대기 중...</div>
         </div>
     </main>
 
-    <!-- Puzzle Modal -->
     <div class="modal" id="puzzle-modal">
         <div class="panel">
+            <div class="panel-header-line" id="modal-line"></div>
             <button class="close-x" onclick="closeModal()">&times;</button>
             <div id="modal-content"></div>
         </div>
     </div>
 
-    <!-- Hint -->
     <button class="hint-toggle" onclick="toggleHintPopup()">?</button>
     <div class="hint-pop" id="hint-popup">
         <p id="hint-text" style="color:var(--text-dim); font-size:0.9rem; margin-bottom:1.4rem;">보안 힌트를 확인하시겠습니까?</p>
         <button id="hint-reveal-btn" class="go-btn" style="background:var(--google-yellow); color:#000;" onclick="revealHint()">힌트 확인하기</button>
     </div>
 
-    <!-- Victory -->
     <div class="victory" id="victory-screen">
         <div class="v-card">
             <div class="cookie-gift">
@@ -599,28 +556,36 @@
                 Google for Startups가 준비한 쫀득한 <strong>'두쫀쿠'</strong>를 획득했습니다!<br>
                 <span style="color:#666; font-size:0.95rem; font-weight:400;">혁신의 여정에 함께해 주셔서 감사합니다.</span>
             </p>
-            <button class="go-btn" onclick="location.reload()">재시작</button>
+            <button class="go-btn" style="background:var(--google-blue)" onclick="location.reload()">시스템 재시작</button>
         </div>
     </div>
 
     <script>
         const GAME_DATA = {
-            layer1: { step: 1, title: "Layer 1: 이름의 기원", desc: "구글의 이름은 수학 용어로 '10의 100제곱'을 뜻하는 이 단어의 오타에서 유래되었습니다.", missions: [{ id: "m1", label: "ANSWER", q: "원래의 단어를 입력하세요.", ans: ["구골", "googol"], hint: "방대한 정보를 모두 담겠다는 의지가 담긴 숫자 단위입니다. 'G'로 시작해 'L'로 끝납니다." }] },
-            layer2: { step: 2, title: "Layer 2: 마스터의 능력", desc: "구성원 개개인의 본질과 잠재력을 읽어내는 리더의 능력을 무엇이라 할까요?", missions: [{ id: "m2", label: "ANSWER", q: "리더의 핵심 능력을 입력하세요.", ans: ["피플 리터러시", "people literacy", "피플리터러시"], hint: "데이터를 읽는 게 데이터 리터러시라면, '사람'의 본질을 읽는 능력은 이것입니다." }] },
-            layer3: { step: 3, title: "Layer 3: 스타트업 생존율", desc: "한국 스타트업의 미래는 밝습니다.", missions: [{ id: "m3", label: "ANSWER", q: "구글 엑셀러레이팅 프로그램을 이수한 한국 스타트업의 생존율은 몇 %일까요?", ans: ["98%", "98"], hint: "매우 높은 수치입니다. 두 자리 숫자를 입력하세요." }] },
-            layer4: { step: 4, title: "Layer 4: 최종 열쇠", desc: "이 서밋의 메인 파트너를 입력하십시오.", missions: [{ id: "m4", label: "ANSWER", q: "Startup Alumni Summit with [ ] DeepMind.", ans: ["구글", "google"], hint: "현재 Innovation Hub의 주체입니다." }] }
+            layer1: { step: 1, title: "Layer 1: 이름의 기원", color: "var(--google-blue)", desc: "구글의 이름은 수학 용어로 '10의 100제곱'을 뜻하는 이 단어의 오타에서 유래되었습니다.", missions: [{ id: "m1", label: "ANSWER", q: "원래의 단어를 입력하세요.", ans: ["구골", "googol"], hint: "방대한 정보를 모두 담겠다는 의지가 담긴 숫자 단위입니다. 'G'로 시작해 'L'로 끝납니다." }] },
+            layer2: { step: 2, title: "Layer 2: 마스터의 능력", color: "var(--google-red)", desc: "구성원 개개인의 본질과 잠재력을 읽어내는 리더의 능력을 무엇이라 할까요?", missions: [{ id: "m2", label: "ANSWER", q: "리더의 핵심 능력을 입력하세요.", ans: ["피플 리터러시", "people literacy", "피플리터러시"], hint: "데이터를 읽는 게 데이터 리터러시라면, '사람'의 본질을 읽는 능력은 이것입니다." }] },
+            layer3: { step: 3, title: "Layer 3: 스타트업 생존율", color: "var(--google-yellow)", desc: "한국 스타트업의 미래는 밝습니다.", missions: [{ id: "m3", label: "ANSWER", q: "구글 엑셀러레이팅 프로그램을 이수한 한국 스타트업의 생존율은 몇 %일까요?", ans: ["98%", "98"], hint: "매우 높은 수치입니다. 두 자리 숫자를 입력하세요." }] },
+            layer4: { step: 4, title: "Layer 4: 최종 열쇠", color: "var(--google-green)", desc: "이 서밋의 메인 파트너를 입력하십시오.", missions: [{ id: "m4", label: "ANSWER", q: "Startup Alumni Summit with [ ] DeepMind.", ans: ["구글", "google"], hint: "현재 Innovation Hub의 주체입니다." }] }
         };
 
         const state = {
-            start: Date.now(),
+            start: null,
             solved: { layer1: false, layer2: false, layer3: false, layer4: false },
             hintCount: 0,
             seenHints: new Set(),
             active: null
         };
 
+        function startGame() {
+            document.getElementById('intro-screen').classList.add('hide');
+            state.start = Date.now();
+            addLog("시스템 접속 완료. Innovation Hub의 4가지 레이어를 해제하십시오.", "important");
+            startTimer();
+        }
+
         function startTimer() {
             setInterval(() => {
+                if (!state.start) return;
                 const sec = Math.floor((Date.now() - state.start) / 1000);
                 document.getElementById('timer').textContent =
                     String(Math.floor(sec / 60)).padStart(2, '0') + ':' +
@@ -644,32 +609,26 @@
             if (state.solved[id]) return;
             state.active = id;
             const data = GAME_DATA[id];
+            document.getElementById('modal-line').style.background = data.color;
             let html = `<div style="margin-bottom:1.5rem;">
-                <div style="font-size:0.7rem; color:var(--google-blue); font-weight:bold; margin-bottom:5px;">LAYER ${data.step}</div>
+                <div style="font-size:0.7rem; color:${data.color}; font-weight:bold; margin-bottom:5px;">LAYER ${data.step}</div>
                 <h2 style="font-size:1.4rem; color:#fff; margin-bottom:10px;">${data.title}</h2>
                 <p style="color:var(--text-dim); font-size:0.9rem;">${data.desc}</p>
             </div>`;
             data.missions.forEach(m => {
                 html += `<div class="m-box">
-                    <div class="m-label">${m.label}</div>
-                    <div class="m-q" style="color:var(--text-dim); font-size:0.9rem; margin-bottom:10px;">${m.q}</div>
+                    <div class="m-label" style="color:${data.color}">${m.label}</div>
+                    <div class="m-q" style="color:var(--text-dim);font-size:0.9rem;margin-bottom:8px;">${m.q}</div>
                     <input type="text" id="${m.id}" class="input" placeholder="정답 입력" autocomplete="off">
                 </div>`;
             });
-            html += `<button class="go-btn" onclick="check()">분석 승인</button>`;
+            html += `<button class="go-btn" style="background:${data.color}" onclick="check()">분석 승인</button>`;
             document.getElementById('modal-content').innerHTML = html;
             document.getElementById('puzzle-modal').classList.add('active');
-            // Focus first input
-            setTimeout(() => {
-                const first = document.querySelector('#modal-content .input');
-                if (first) first.focus();
-            }, 100);
+            setTimeout(() => { const inp = document.querySelector('#modal-content .input'); if (inp) inp.focus(); }, 80);
         }
 
-        function closeModal() {
-            document.getElementById('puzzle-modal').classList.remove('active');
-            state.active = null;
-        }
+        function closeModal() { document.getElementById('puzzle-modal').classList.remove('active'); state.active = null; }
 
         function check() {
             const data = GAME_DATA[state.active];
@@ -679,45 +638,32 @@
                 const ok = m.ans.some(a => a.toLowerCase().replace(/\s/g, '') === val);
                 if (!ok) allOk = false;
             });
-
             if (allOk) {
                 const id = state.active;
                 state.solved[id] = true;
                 const count = Object.values(state.solved).filter(v => v).length;
                 document.getElementById('solved-count').textContent = count;
                 document.getElementById(id).classList.add('solved');
-
-                const slot = document.getElementById(`slot-${count}`);
-                slot.classList.add('filled');
-                slot.innerHTML = `<svg viewBox="0 0 24 24" fill="var(--google-yellow)" style="width:28px;height:28px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`;
-
-                addLog(`GRANTS ACCESS: ${data.title} 레이어 해제.`, 'success');
+                document.getElementById(`slot-${count}`).classList.add('filled');
+                document.getElementById(`slot-${count}`).innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="${data.color}"/></svg>`;
+                addLog(`GRANTS ACCESS: ${data.title} 승인 완료.`, 'success');
                 closeModal();
-
                 if (state.solved.layer1 && state.solved.layer2 && state.solved.layer3) {
-                    const l4 = document.getElementById('layer4');
-                    l4.classList.add('ready');
-                    addLog("AUTH READY: 최종 스크린이 활성화되었습니다.", "important");
+                    document.getElementById('layer4').classList.remove('locked');
+                    document.getElementById('layer4').classList.add('ready');
+                    addLog("AUTH READY: 최종 액세스 권한이 활성화되었습니다.", "important");
                 }
-
-                if (id === 'layer4') {
-                    startConfetti();
-                    setTimeout(() => document.getElementById('victory-screen').classList.add('active'), 600);
-                }
+                if (id === 'layer4') { startConfetti(); setTimeout(() => document.getElementById('victory-screen').classList.add('active'), 500); }
             } else {
                 addLog("AUTH DENIED: 데이터 불일치.", "error");
-                // Shake the inputs
                 document.querySelectorAll('#modal-content .input').forEach(el => {
                     el.style.borderColor = 'var(--google-red)';
-                    setTimeout(() => el.style.borderColor = '#2d333d', 1200);
+                    setTimeout(() => el.style.borderColor = '#2d333d', 1000);
                 });
             }
         }
 
-        // Allow Enter key to submit
-        document.addEventListener('keydown', e => {
-            if (e.key === 'Enter' && state.active) check();
-        });
+        document.addEventListener('keydown', e => { if (e.key === 'Enter' && state.active) check(); });
 
         function toggleHintPopup() {
             const pop = document.getElementById('hint-popup');
@@ -730,59 +676,47 @@
 
         function revealHint() {
             const target = Object.keys(state.solved).find(k => !state.solved[k]);
-            if (!target) {
-                document.getElementById('hint-text').textContent = "모든 과제가 완료되었습니다.";
-                document.getElementById('hint-reveal-btn').style.display = "none";
-                return;
-            }
-            if (!state.seenHints.has(target)) {
-                state.hintCount++;
-                state.seenHints.add(target);
-                document.getElementById('hints-used').textContent = state.hintCount;
-            }
+            if (!target) { document.getElementById('hint-text').textContent = "모든 과제가 완료되었습니다."; document.getElementById('hint-reveal-btn').style.display = "none"; return; }
+            if (!state.seenHints.has(target)) { state.hintCount++; state.seenHints.add(target); document.getElementById('hints-used').textContent = state.hintCount; }
             const data = GAME_DATA[target];
             const hintsText = data.missions.map(m => `• ${m.hint}`).join('<br>');
-            document.getElementById('hint-text').innerHTML =
-                `<div style="text-align:left; color:#fff; font-size:0.85rem; line-height:1.6;">${hintsText}</div>`;
+            document.getElementById('hint-text').innerHTML = `<div style="text-align:left; color:#fff; font-size:0.85rem; line-height:1.6;">${hintsText}</div>`;
             document.getElementById('hint-reveal-btn').style.display = "none";
         }
 
         function startConfetti() {
             const canvas = document.getElementById('confetti-canvas');
             const ctx = canvas.getContext('2d');
-            canvas.width  = window.innerWidth;
+            canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            const colors = ['#4285F4','#EA4335','#FBBC04','#34A853','#FFFFFF'];
-            const pieces = Array.from({ length: 220 }, () => ({
-                x:     Math.random() * canvas.width,
-                y:     Math.random() * canvas.height - canvas.height,
-                size:  Math.random() * 10 + 4,
-                color: colors[Math.floor(Math.random() * colors.length)],
-                speed: Math.random() * 4 + 2,
-                angle: Math.random() * 6.28,
-                rot:   (Math.random() - 0.5) * 0.15,
-                drift: (Math.random() - 0.5) * 1.5
-            }));
+            const pieces = [];
+            const colors = ['#4285F4', '#EA4335', '#FBBC04', '#34A853', '#FFFFFF'];
+            for (let i = 0; i < 200; i++) {
+                pieces.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height - canvas.height,
+                    size: Math.random() * 10 + 5,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    speed: Math.random() * 4 + 2,
+                    angle: Math.random() * 6.28,
+                    rot: (Math.random() - 0.5) * 0.12,
+                    drift: (Math.random() - 0.5) * 1.2
+                });
+            }
             function draw() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 pieces.forEach(p => {
-                    ctx.save();
-                    ctx.translate(p.x, p.y);
-                    ctx.rotate(p.angle);
+                    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle);
                     ctx.fillStyle = p.color;
                     ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
                     ctx.restore();
-                    p.y     += p.speed;
-                    p.x     += p.drift;
-                    p.angle += p.rot;
+                    p.y += p.speed; p.x += p.drift; p.angle += p.rot;
                     if (p.y > canvas.height) { p.y = -20; p.x = Math.random() * canvas.width; }
                 });
                 requestAnimationFrame(draw);
             }
             draw();
         }
-
-        startTimer();
     </script>
 </body>
 </html>
